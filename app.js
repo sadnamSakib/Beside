@@ -38,6 +38,9 @@ const base = "/api/v1";
 //routes
 app.use(`${base}/auth`, authRoute);
 app.use(`${base}/user`, userRoute);
+app.use(`${base}/user`, (req, res) => {
+  res.send("hello");
+});
 
 app.use(errorHandler);
 
