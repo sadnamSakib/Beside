@@ -22,7 +22,7 @@ const UserSchema = new Schema({
   },
   role: {
     type: String,
-    enum: ["Admin", "Faculty", "Student"],
+    enum: ["Admin", "User", "Provider"],
     required: true,
   },
   createdDate: {
