@@ -32,6 +32,18 @@ const envSchema = Joi.object()
     LOG_LEVEL: Joi.string()
       .valid("error", "warn", "info", "http", "debug")
       .default("info"),
+    // Email service configuration
+    EMAIL_HOST: Joi.string().description("SMTP host"),
+    EMAIL_PORT: Joi.number().description("SMTP port"),
+    EMAIL_USERNAME: Joi.string().description("SMTP username"),
+    EMAIL_PASSWORD: Joi.string().description("SMTP password"),
+    EMAIL_FROM: Joi.string().description("Email from address"),
+    FRONTEND_URL: Joi.string()
+      .default("http://localhost:3000")
+      .description("Frontend URL for email links"),
+    // SendGrid specific configuration
+    SENDGRID_USERNAME: Joi.string().description("SendGrid username"),
+    SENDGRID_PASSWORD: Joi.string().description("SendGrid password/API key"),
   })
   .unknown();
 
@@ -65,5 +77,17 @@ export const env = {
   },
   logging: {
     level: envVars.LOG_LEVEL,
+  },
+  email: {
+    host: envVars.EMAIL_HOST,
+    port: envVars.EMAIL_PORT,
+    username: envVars.EMAIL_USERNAME,
+    password: envVars.EMAIL_PASSWORD,
+    from: envVars.EMAIL_FROM || "noreply@besideapp.com",
+    frontendUrl: envVars.FRONTEND_URL,
+    sendgrid: {
+      username: envVars.SENDGRID_USERNAME,
+      password: envVars.SENDGRID_PASSWORD,
+    },
   },
 };

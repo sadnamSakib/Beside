@@ -35,6 +35,14 @@ export const registerUser = catchAsync(async (req, res, next) => {
     role: role || "User",
   });
 
+  // Send verification email
+  try {
+    await authController.sendInitialVerificationEmail(user);
+  } catch (error) {
+    // Continue even if email sending fails
+    console.error("Failed to send verification email:", error);
+  }
+
   // Generate and send JWT token
   authController.createSendToken(user, 201, res);
 });

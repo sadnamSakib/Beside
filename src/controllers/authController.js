@@ -5,6 +5,9 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { AppError } from "../utils/AppError.js";
 import { promisify } from "util";
+import crypto from "crypto";
+import { emailService } from "../services/emailService.js";
+import { hashToken } from "../utils/tokenUtils.js";
 
 /**
  * Generate JWT token
@@ -209,13 +212,223 @@ export const restrictTo = (...roles) => {
  * Send password reset email
  */
 export const forgotPassword = catchAsync(async (req, res, next) => {
-  // Implementation would include:
-  // 1. Find user by email
-  // 2. Generate reset token
-  // 3. Send email with reset link
+  // 1) Get user based on POST email
+  const { email } = req.body;
 
+  if (!email) {
+    return next(new AppError("Please provide your email address", 400));
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return next(new AppError("No user found with that email address", 404));
+  }
+
+  // 2) Generate random reset token
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  // Hash token and set to resetPasswordToken field
+  user.passwordResetToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  // Set token expiry time (10 minutes)
+  user.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+
+  await user.save({ validateBeforeSave: false });
+
+  // 3) Send email with reset token
+  try {
+    await emailService.sendPasswordResetEmail(
+      user.email,
+      resetToken,
+      user.userName
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: "Password reset token sent to your email",
+    });
+  } catch (err) {
+    // If email fails, reset the token and expiry
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return next(
+      new AppError(
+        "There was an error sending the email. Please try again later!",
+        500
+      )
+    );
+  }
+});
+
+/**
+ * Reset password with token
+ */
+export const resetPassword = catchAsync(async (req, res, next) => {
+  // 1) Get user based on the token
+  const { token } = req.params;
+  const { password, passwordConfirm } = req.body;
+
+  if (!password || !passwordConfirm) {
+    return next(
+      new AppError("Please provide password and password confirmation", 400)
+    );
+  }
+
+  if (password !== passwordConfirm) {
+    return next(new AppError("Passwords do not match", 400));
+  }
+
+  // Hash the token to compare with the stored hashed token
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  // Find user with the token and check if token has not expired
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError("Token is invalid or has expired", 400));
+  }
+
+  // 2) Set the new password
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  user.password = hashedPassword;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+
+  await user.save();
+
+  // 3) Log the user in, send JWT
+  createSendToken(user, 200, res);
+});
+
+/**
+ * Send email verification
+ */
+export const sendVerificationEmail = catchAsync(async (req, res, next) => {
+  // This could be used when a user requests a new verification email
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  if (user.emailVerified) {
+    return next(new AppError("Email already verified", 400));
+  }
+
+  // Generate verification token
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+
+  // Hash token and save to user
+  user.emailVerificationToken = crypto
+    .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex");
+
+  user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
+  await user.save({ validateBeforeSave: false });
+
+  // Send verification email
+  try {
+    await emailService.sendVerificationEmail(
+      user.email,
+      verificationToken,
+      user.userName
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: "Verification email sent",
+    });
+  } catch (err) {
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return next(
+      new AppError(
+        "There was an error sending the verification email. Please try again later!",
+        500
+      )
+    );
+  }
+});
+
+/**
+ * Verify email with token
+ */
+export const verifyEmail = catchAsync(async (req, res, next) => {
+  const { token } = req.params;
+
+  // Hash the token
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  // Find user with matching token that hasn't expired
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError("Token is invalid or has expired", 400));
+  }
+
+  // Mark email as verified
+  user.emailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+
+  await user.save();
+
+  // Return success
   res.status(200).json({
     status: "success",
-    message: "Password reset email sent",
+    message: "Email verified successfully",
   });
 });
+
+/**
+ * Send verification email on registration
+ * This should be called after a new user is created
+ */
+export const sendInitialVerificationEmail = async (user) => {
+  // Generate verification token
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+
+  // Hash token and save to user
+  user.emailVerificationToken = crypto
+    .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex");
+
+  user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
+  await user.save({ validateBeforeSave: false });
+
+  // Send verification email
+  try {
+    await emailService.sendVerificationEmail(
+      user.email,
+      verificationToken,
+      user.userName
+    );
+
+    return true;
+  } catch (err) {
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return false;
+  }
+};
