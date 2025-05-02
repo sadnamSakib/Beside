@@ -1,2 +1,0 @@
-# Beside-Backend
-# Beside-Frontend

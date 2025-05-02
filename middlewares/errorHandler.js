@@ -1,5 +1,7 @@
-// src/middlewares/errorHandler.js
-import { AppError } from "../utils/AppError.js";
+/**
+ * Global error handling middleware
+ */
+const AppError = require("../utils/AppError");
 
 const handleCastErrorDB = (err) => {
   const message = `Invalid ${err.path}: ${err.value}`;
@@ -50,7 +52,7 @@ const sendErrorProd = (err, res) => {
   }
 };
 
-export const errorHandler = (err, req, res, next) => {
+module.exports = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || "error";
 
