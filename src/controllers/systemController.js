@@ -1,6 +1,7 @@
-const mongoose = require("mongoose");
-const catchAsync = require("../utils/catchAsync");
-const AppError = require("../utils/AppError");
+// src/controllers/systemController.js
+import mongoose from "mongoose";
+import { catchAsync } from "../utils/catchAsync.js";
+import { AppError } from "../utils/AppError.js";
 
 /**
  * Model for dummy verification data
@@ -48,7 +49,7 @@ const DummyVerification =
 /**
  * Check if in development environment
  */
-const checkDevEnvironment = (req, res, next) => {
+export const checkDevEnvironment = (req, res, next) => {
   if (process.env.NODE_ENV !== "development") {
     return next(
       new AppError("This endpoint is only available in development mode", 403)
@@ -61,7 +62,7 @@ const checkDevEnvironment = (req, res, next) => {
  * Create dummy verification data
  * @route POST /api/v1/system/createDummyData
  */
-const createDummyData = catchAsync(async (req, res, next) => {
+export const createDummyData = catchAsync(async (req, res, next) => {
   const verificationData = req.body;
 
   if (!Array.isArray(verificationData) && !verificationData.idNumber) {
@@ -89,7 +90,7 @@ const createDummyData = catchAsync(async (req, res, next) => {
  * Append to existing dummy data
  * @route POST /api/v1/system/appendDummyData
  */
-const appendDummyData = catchAsync(async (req, res, next) => {
+export const appendDummyData = catchAsync(async (req, res, next) => {
   const verificationData = req.body;
 
   if (!Array.isArray(verificationData)) {
@@ -112,7 +113,7 @@ const appendDummyData = catchAsync(async (req, res, next) => {
  * Update existing dummy data
  * @route PUT /api/v1/system/updateDummyData/:idNumber
  */
-const updateDummyData = catchAsync(async (req, res, next) => {
+export const updateDummyData = catchAsync(async (req, res, next) => {
   const { idNumber } = req.params;
   const updateData = req.body;
 
@@ -145,7 +146,7 @@ const updateDummyData = catchAsync(async (req, res, next) => {
  * Delete dummy data
  * @route DELETE /api/v1/system/deleteDummyData/:idNumber
  */
-const deleteDummyData = catchAsync(async (req, res, next) => {
+export const deleteDummyData = catchAsync(async (req, res, next) => {
   const { idNumber } = req.params;
 
   if (!idNumber) {
@@ -168,7 +169,7 @@ const deleteDummyData = catchAsync(async (req, res, next) => {
  * Get all dummy verification data
  * @route GET /api/v1/system/dummyData
  */
-const getDummyData = catchAsync(async (req, res, next) => {
+export const getDummyData = catchAsync(async (req, res, next) => {
   const result = await DummyVerification.find();
 
   res.status(200).json({
@@ -189,7 +190,7 @@ const getDummyData = catchAsync(async (req, res, next) => {
  * @param {Date} dateOfBirth - Date of birth to verify
  * @returns {Promise<Object>} Verification result
  */
-const verifyIdAgainstDummy = async (
+export const verifyIdAgainstDummy = async (
   idNumber,
   firstName,
   lastName,
@@ -245,15 +246,4 @@ const verifyIdAgainstDummy = async (
       verified: true,
     },
   };
-};
-
-// Export controller functions and the verification helper
-module.exports = {
-  checkDevEnvironment,
-  createDummyData,
-  appendDummyData,
-  updateDummyData,
-  deleteDummyData,
-  getDummyData,
-  verifyIdAgainstDummy,
 };

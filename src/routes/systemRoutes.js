@@ -1,7 +1,9 @@
-const express = require("express");
+// src/routes/systemRoutes.js
+import express from "express";
+import * as systemController from "../controllers/systemController.js";
+import * as authController from "../controllers/authController.js";
+
 const router = express.Router();
-const systemController = require("../controllers/systemController");
-const authController = require("../controllers/authController");
 
 // Middleware to ensure these routes only work in development
 router.use(systemController.checkDevEnvironment);
@@ -23,4 +25,4 @@ router
   .put(systemController.updateDummyData)
   .delete(systemController.deleteDummyData);
 
-module.exports = router;
+export default router;

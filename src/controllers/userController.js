@@ -1,14 +1,15 @@
-const User = require("../models/userModel");
-const authController = require("./authController");
-const passwordHash = require("../utils/passwordHash");
-const AppError = require("../utils/AppError");
-const catchAsync = require("../utils/catchAsync");
+// src/controllers/userController.js
+import { User } from "../models/userModel.js";
+import * as authController from "./authController.js";
+import { passwordHash } from "../utils/passwordHash.js";
+import { AppError } from "../utils/AppError.js";
+import { catchAsync } from "../utils/catchAsync.js";
 
 /**
  * Register a new user
  * @route POST /api/v1/user/register
  */
-exports.registerUser = catchAsync(async (req, res, next) => {
+export const registerUser = catchAsync(async (req, res, next) => {
   const { userName, email, mobileNo, password, role } = req.body;
 
   // Check if user already exists
@@ -42,7 +43,7 @@ exports.registerUser = catchAsync(async (req, res, next) => {
  * Get user profile
  * @route GET /api/v1/user/profile
  */
-exports.getUserProfile = catchAsync(async (req, res, next) => {
+export const getUserProfile = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user._id);
 
   if (!user) {
@@ -61,7 +62,7 @@ exports.getUserProfile = catchAsync(async (req, res, next) => {
  * Update user profile
  * @route PUT /api/v1/user/profile
  */
-exports.updateUserProfile = catchAsync(async (req, res, next) => {
+export const updateUserProfile = catchAsync(async (req, res, next) => {
   const { profileSettings } = req.body;
 
   // Fields allowed to update
@@ -103,7 +104,7 @@ exports.updateUserProfile = catchAsync(async (req, res, next) => {
  * Update consent settings for a user
  * @route POST /api/v1/user/consent
  */
-exports.updateConsent = catchAsync(async (req, res, next) => {
+export const updateConsent = catchAsync(async (req, res, next) => {
   const { consent } = req.body;
 
   if (consent === undefined) {
@@ -135,7 +136,7 @@ exports.updateConsent = catchAsync(async (req, res, next) => {
  * Upload profile photo (selfie)
  * @route POST /api/v1/user/profile-photo
  */
-exports.uploadProfilePhoto = catchAsync(async (req, res, next) => {
+export const uploadProfilePhoto = catchAsync(async (req, res, next) => {
   // In a real implementation, this would handle file upload
   // For now, just updating a URL
 
@@ -170,7 +171,7 @@ exports.uploadProfilePhoto = catchAsync(async (req, res, next) => {
  * Delete user account
  * @route DELETE /api/v1/user/profile
  */
-exports.deleteUserAccount = catchAsync(async (req, res, next) => {
+export const deleteUserAccount = catchAsync(async (req, res, next) => {
   await User.findByIdAndDelete(req.user._id);
 
   res.status(204).json({

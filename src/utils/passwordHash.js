@@ -1,11 +1,12 @@
-const bcrypt = require("bcrypt");
+// src/utils/passwordHash.js
+import bcrypt from "bcrypt";
 
 /**
  * Hash a password using bcrypt
  * @param {string} password - The plain text password to hash
  * @returns {Promise<string>} The hashed password
  */
-const passwordHash = async (password) => {
+export const passwordHash = async (password) => {
   const saltRounds = 10;
   try {
     const salt = await bcrypt.genSalt(saltRounds);
@@ -14,5 +15,3 @@ const passwordHash = async (password) => {
     throw new Error(`Error hashing password: ${error.message}`);
   }
 };
-
-module.exports = passwordHash;

@@ -1,9 +1,10 @@
-const User = require("../models/userModel");
-const catchAsync = require("../utils/catchAsync");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const AppError = require("../utils/AppError");
-const { promisify } = require("util");
+// src/controllers/authController.js
+import { User } from "../models/userModel.js";
+import { catchAsync } from "../utils/catchAsync.js";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import { AppError } from "../utils/AppError.js";
+import { promisify } from "util";
 
 /**
  * Generate JWT token
@@ -22,7 +23,7 @@ const signToken = (id) => {
  * @param {number} statusCode - HTTP status code
  * @param {Object} res - Express response object
  */
-exports.createSendToken = (user, statusCode, res) => {
+export const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id);
 
   const cookieOptions = {
@@ -54,7 +55,7 @@ exports.createSendToken = (user, statusCode, res) => {
 /**
  * Login user and send JWT token
  */
-exports.login = catchAsync(async (req, res, next) => {
+export const login = catchAsync(async (req, res, next) => {
   const { userName, password } = req.body;
 
   // Check if username and password exist
@@ -71,13 +72,13 @@ exports.login = catchAsync(async (req, res, next) => {
   }
 
   // Send token
-  this.createSendToken(user, 200, res);
+  createSendToken(user, 200, res);
 });
 
 /**
  * Get current user info
  */
-exports.currentUser = catchAsync(async (req, res, next) => {
+export const currentUser = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     data: {
@@ -89,7 +90,7 @@ exports.currentUser = catchAsync(async (req, res, next) => {
 /**
  * Logout user
  */
-exports.logout = catchAsync(async (req, res, next) => {
+export const logout = catchAsync(async (req, res, next) => {
   res.cookie("jwt", "loggedout", {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
@@ -104,7 +105,7 @@ exports.logout = catchAsync(async (req, res, next) => {
 /**
  * Verify user ID
  */
-exports.verifyUser = catchAsync(async (req, res, next) => {
+export const verifyUser = catchAsync(async (req, res, next) => {
   const { idNumber, firstName, lastName, dateOfBirth } = req.body;
 
   if (!idNumber || !firstName || !lastName || !dateOfBirth) {
@@ -114,7 +115,7 @@ exports.verifyUser = catchAsync(async (req, res, next) => {
   }
 
   // Get the verification helper from system controller
-  const { verifyIdAgainstDummy } = require("./systemController");
+  const { verifyIdAgainstDummy } = await import("./systemController.js");
 
   // Verify against dummy database
   const verificationResult = await verifyIdAgainstDummy(
@@ -156,7 +157,7 @@ exports.verifyUser = catchAsync(async (req, res, next) => {
 /**
  * Protect routes - Authentication middleware
  */
-exports.protect = catchAsync(async (req, res, next) => {
+export const protect = catchAsync(async (req, res, next) => {
   let token;
 
   // Get token from authorization header or cookies
@@ -193,7 +194,7 @@ exports.protect = catchAsync(async (req, res, next) => {
 /**
  * Restrict access to specific roles
  */
-exports.restrictTo = (...roles) => {
+export const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return next(
@@ -207,7 +208,7 @@ exports.restrictTo = (...roles) => {
 /**
  * Send password reset email
  */
-exports.forgotPassword = catchAsync(async (req, res, next) => {
+export const forgotPassword = catchAsync(async (req, res, next) => {
   // Implementation would include:
   // 1. Find user by email
   // 2. Generate reset token
