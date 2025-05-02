@@ -1,13 +1,17 @@
 const bcrypt = require("bcrypt");
 
+/**
+ * Hash a password using bcrypt
+ * @param {string} password - The plain text password to hash
+ * @returns {Promise<string>} The hashed password
+ */
 const passwordHash = async (password) => {
   const saltRounds = 10;
   try {
     const salt = await bcrypt.genSalt(saltRounds);
-    const hash = await bcrypt.hash(password, salt);
-    return hash;
+    return await bcrypt.hash(password, salt);
   } catch (error) {
-    throw new error("Error Hashing Password!");
+    throw new Error(`Error hashing password: ${error.message}`);
   }
 };
 

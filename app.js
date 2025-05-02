@@ -1,51 +1,69 @@
 const express = require("express");
 const cors = require("cors");
-const AppError = require("./utils/AppError");
+const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
-//middleware
+const helmet = require("helmet");
+const xss = require("xss-clean");
+const cookieParser = require("cookie-parser");
+const mongoSanitize = require("express-mongo-sanitize");
+
+const AppError = require("./utils/AppError");
 const errorHandler = require("./middlewares/errorHandler");
 
-//routes
-const authRoute = require("./routes/authRoutes");
-const userRoute = require("./routes/userRoutes");
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const systemRoutes = require("./routes/systemRoutes");
 
 const app = express();
 
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(helmet());
 
-// Configure the cors
-const app_url = process.env.APP_URL;
-app.use(
-  cors({
-    origin: "*",
-    credentials: true,
-  })
-);
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
 
-// Limit requests from same API
 const limiter = rateLimit({
   max: 100,
-  windowMs: 60 * 60 * 10,
+  windowMs: 60 * 60 * 1000,
   message: "Too many requests from this IP, please try again in an hour!",
 });
 app.use("/api", limiter);
 
-// Body parser, reading data from body into req.body
-app.use(express.json({ limit: "50mb", extended: true }));
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(cookieParser());
 
-//baseurl
-const base = "/api/v1";
-//routes
-app.use(`${base}/auth`, authRoute);
-app.use(`${base}/user`, userRoute);
-app.use(`${base}/user`, (req, res) => {
-  res.send("hello");
+app.use(mongoSanitize());
+
+app.use(xss());
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["http://localhost:3000"];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) === -1) {
+        return callback(new AppError("CORS policy violation", 403), false);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+  })
+);
+
+const baseUrl = "/api/v1";
+app.use(`${baseUrl}/auth`, authRoutes);
+app.use(`${baseUrl}/user`, userRoutes);
+app.use(`${baseUrl}/system`, systemRoutes);
+
+app.all("*", (req, res, next) => {
+  next(new AppError(`Cannot find ${req.originalUrl} on this server!`, 404));
 });
 
 app.use(errorHandler);
-
-app.all("*", (req, res, next) => {
-  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
-});
 
 module.exports = app;
